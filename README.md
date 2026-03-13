@@ -64,4 +64,4 @@ print(sys.executable)
 ```
 if after executing this cell it shows you the path of your virtual environment, it works ! 
 
-_[To be continued ]_
+# Link of the google Collab [here](https://colab.research.google.com/drive/1zVgsqpySxEAGOxTOStpjsPD_wjLUeIkG?usp=sharing)

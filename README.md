@@ -65,3 +65,6 @@ print(sys.executable)
 if after executing this cell it shows you the path of your virtual environment, it works ! 
 
 # Link of the google Collab [here](https://colab.research.google.com/drive/1zVgsqpySxEAGOxTOStpjsPD_wjLUeIkG?usp=sharing)
+
+# Instructions for the Google Collab 
+You have to import the diferent `.csv` files of this repository (in the `datas-gestures``repository in the notebook at the same leval as `sample_data` 

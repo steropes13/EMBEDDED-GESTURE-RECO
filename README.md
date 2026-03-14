@@ -66,5 +66,5 @@ if after executing this cell it shows you the path of your virtual environment, 
 
 # Link of the google Collab [here](https://colab.research.google.com/drive/1zVgsqpySxEAGOxTOStpjsPD_wjLUeIkG?usp=sharing)
 
-# Instructions for the Google Collab 
+# Instructions for the Google Colab 
 You have to import the diferent `.csv` files of this repository (in the `datas-gestures`repository in the notebook at the same leval as `sample_data` 

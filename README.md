@@ -1,4 +1,11 @@
-# list of instructions [TODO]
+# list of instructions [TODO] 
+- More datas for "rest.csv" and "up-down" it seems to not work : only circle and shake works 
+- more Neurons for Relu ?
+- Add explications about relu.
+- Complete the missing tasks ? 
+- Clarify/clean the ipynb (graph of loss, optimizer ?) 
+- Very the problem of 141 samples.
+- Real matrix or ASCII is sufficient ? 
 
 
 # How to use the *jupyter-notebook* locally   

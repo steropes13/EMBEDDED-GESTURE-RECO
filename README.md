@@ -1,5 +1,6 @@
 # list of instructions [TODO] 
-- More datas for "rest.csv" and "up-down" it seems to not work : only circle and shake works 
+- up-down, rest and shake work but not circle (only with a specific configuration of the hand) -> more datas for circle
+- explications of the PSD mean and PSD Max in .ino file 
 - more Neurons for Relu ?
 - Add explications about relu.
 - Complete the missing tasks ? 

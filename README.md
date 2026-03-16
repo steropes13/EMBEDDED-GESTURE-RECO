@@ -76,3 +76,16 @@ if after executing this cell it shows you the path of your virtual environment, 
 
 # Instructions for the Google Colab 
 You have to import the diferent `.csv` files of this repository (in the `datas-gestures`repository in the notebook at the same leval as `sample_data` 
+
+# instructions for the gesture classification file : 
+To use this file in the format `.ino` (in the directory `IMU_GESTURE_CLASSIFICATION/`) it is necessary to import the model (named `model.h`) in this directory, that you can get by the google colab (or the `.ipynb` file locally on you computer). 
+If you want to test the "circle" gesture you will have to rotate your wrist at the same time you are drawing the cirle, same as on a piece of paper) 
+
+# Instructions for the IMU acquisition 
+If you want to create your own datas you will have to use the `.ino` file located in the repository `IMU/` and name them respectively : 
+```
+ - circle-1.csv
+ - rest-1.csv
+ - up-down-1.csv
+ - shake-1.csv
+```

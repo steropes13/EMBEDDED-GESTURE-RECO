@@ -25,9 +25,18 @@
 //#include <tensorflow/lite/version.h>
 
 #include "model.h"
-
-const float accelerationThreshold = 2.5; // threshold of significant in G's
+// we changed the threshold of the acceleration because it was too high to detect up-down movement and rest 
+const float accelerationThreshold = 1.0; // threshold of significant in G's
 const int numSamples = 141;
+
+//buffer of datas 
+
+float ax[numSamples];
+float ay[numSamples];
+float az[numSamples];
+float gx[numSamples];
+float gy[numSamples];
+float gz[numSamples];
 
 int samplesRead = numSamples;
 
@@ -100,6 +109,68 @@ void setup() {
   // Get pointers for the model's input and output tensors
   tflInputTensor = tflInterpreter->input(0);
   tflOutputTensor = tflInterpreter->output(0);
+
+
+}
+
+  float mean(float *data) {
+  float sum = 0;
+  for (int i = 0; i < numSamples; i++) sum += data[i];
+  return sum / numSamples;
+}
+
+float stddev(float *data) {
+  float m = mean(data);
+  float sum = 0;
+  for (int i = 0; i < numSamples; i++) {
+    float d = data[i] - m;
+    sum += d * d;
+  }
+  return sqrt(sum / numSamples);
+}
+
+float rms(float *data) {
+  float sum = 0;
+  for (int i = 0; i < numSamples; i++) {
+    sum += data[i] * data[i];
+  }
+  return sqrt(sum / numSamples);
+}
+
+float minVal(float *data) {
+  float m = data[0];
+  for (int i = 1; i < numSamples; i++) {
+    if (data[i] < m) m = data[i];
+  }
+  return m;
+}
+
+float maxVal(float *data) {
+  float m = data[0];
+  for (int i = 1; i < numSamples; i++) {
+    if (data[i] > m) m = data[i];
+  }
+  return m;
+}
+
+/* approximation simple PSD */
+float psdMean(float *data) {
+  float sum = 0;
+  for (int i = 1; i < numSamples; i++) {
+    float d = data[i] - data[i-1];
+    sum += d * d;
+  }
+  return sum / numSamples;
+}
+
+float psdMax(float *data) {
+  float maxp = 0;
+  for (int i = 1; i < numSamples; i++) {
+    float d = data[i] - data[i-1];
+    float p = d * d;
+    if (p > maxp) maxp = p;
+  }
+  return maxp;
 }
 
 void loop() {
@@ -134,17 +205,38 @@ void loop() {
 
       // normalize the IMU data between 0 to 1 and store in the model's
       // input tensor
-      tflInputTensor->data.f[samplesRead * 6 + 0] = (aX + 4.0) / 8.0;
-      tflInputTensor->data.f[samplesRead * 6 + 1] = (aY + 4.0) / 8.0;
-      tflInputTensor->data.f[samplesRead * 6 + 2] = (aZ + 4.0) / 8.0;
-      tflInputTensor->data.f[samplesRead * 6 + 3] = (gX + 2000.0) / 4000.0;
-      tflInputTensor->data.f[samplesRead * 6 + 4] = (gY + 2000.0) / 4000.0;
-      tflInputTensor->data.f[samplesRead * 6 + 5] = (gZ + 2000.0) / 4000.0;
+      ax[samplesRead] = (aX + 4.0) / 8.0;
+      ay[samplesRead] = (aY + 4.0) / 8.0;
+      az[samplesRead] = (aZ + 4.0) / 8.0;
+
+      gx[samplesRead] = (gX + 2000.0) / 4000.0;
+      gy[samplesRead] = (gY + 2000.0) / 4000.0;
+      gz[samplesRead] = (gZ + 2000.0) / 4000.0;
 
       samplesRead++;
 
       if (samplesRead == numSamples) {
+         float features[42];
+      int k = 0;
+
+      float* axes[6] = {ax, ay, az, gx, gy, gz};
+
+      for(int a = 0; a < 6; a++){
+
+        features[k++] = mean(axes[a]);
+        features[k++] = stddev(axes[a]);
+        features[k++] = rms(axes[a]);
+        features[k++] = minVal(axes[a]);
+        features[k++] = maxVal(axes[a]);
+        features[k++] = psdMean(axes[a]);
+        features[k++] = psdMax(axes[a]);
+
+}
+        for(int i = 0; i < 42; i++){
+            tflInputTensor->data.f[i] = features[i];
+}
         // Run inferencing
+                
         TfLiteStatus invokeStatus = tflInterpreter->Invoke();
         if (invokeStatus != kTfLiteOk) {
           Serial.println("Invoke failed!");
@@ -159,6 +251,7 @@ void loop() {
           Serial.println(tflOutputTensor->data.f[i], 6);
         }
         Serial.println();
+        samplesRead = numSamples; //reinitisialize (avoid some bugs)
       }
     }
   }

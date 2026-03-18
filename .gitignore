@@ -1,0 +1,12 @@
+# Python virtual environment
+.venv/
+
+# Scratch files for testing or hardware related data
+*scratch/*
+*tmp/*
+
+# macOS system files
+.DS_Store
+
+# VS Code settings
+.vscode/

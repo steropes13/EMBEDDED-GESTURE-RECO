@@ -28,16 +28,16 @@ sudo apt instal python3.11
 ## Creation of the environment in command-line 
 
 ```bash   
-python3.11 -m venv venv_name 
+python3.11 -m venv .venv 
 ```
 
 ## Activation of the environment 
 ```bash   
-source venv_name/bin/activate
+source .venv/bin/activate
 ```
 Normally, you will see the name of your environment shown before your prompt like bellow : 
 ```bash   
-(venv_name) streopes13@steropes13 $ ls -al 
+(.venv) streopes13@steropes13 $ ls -al 
 ```
 
 ## installation of jupyter notebook 

@@ -12,9 +12,9 @@
 */
 
 #ifdef NANO33BLE_SENSE_REV2
-  #include <Arduino_LSM9DS1.h>
-#elif defined(NANO33BLE_SENSE)
   #include <Arduino_BMI270_BMM150.h>
+#elif defined(NANO33BLE_SENSE)
+  #include <Arduino_LSM9DS1.h>
 #endif
 
 

@@ -11,8 +11,12 @@
   This example code is in the public domain.
 */
 
-#include <Arduino_LSM9DS1.h>
-//include "Arduino_BMI270_BMM150.h"
+#ifdef NANO33BLE_SENSE_REV2
+  #include <Arduino_BMI270_BMM150.h>
+#elif defined(NANO33BLE_SENSE)
+  #include <Arduino_LSM9DS1.h>
+#endif
+
 
 const float accelerationThreshold = 2.5; // threshold of significant in G's
 const int numSamples = 119;

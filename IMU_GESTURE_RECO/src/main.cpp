@@ -13,16 +13,16 @@
   This example code is in the public domain.
 */
 
-//#include "Arduino_BMI270_BMM150.h"
-#include <Arduino_LSM9DS1.h>
+#ifdef NANO33BLE_SENSE_REV2
+  #include <Arduino_BMI270_BMM150.h>
+#elif defined(NANO33BLE_SENSE)
+  #include <Arduino_LSM9DS1.h>
+#endif
 
 #include <TensorFlowLite.h>
-
 #include <tensorflow/lite/micro/all_ops_resolver.h>
-//#include <tensorflow/lite/micro/micro_error_reporter.h>
 #include <tensorflow/lite/micro/micro_interpreter.h>
 #include <tensorflow/lite/schema/schema_generated.h>
-//#include <tensorflow/lite/version.h>
 
 #include "model.h"
 // we changed the threshold of the acceleration because it was too high to detect up-down movement and rest 
@@ -231,10 +231,10 @@ void loop() {
         features[k++] = psdMean(axes[a]);
         features[k++] = psdMax(axes[a]);
 
-}
+      }
         for(int i = 0; i < 42; i++){
-            tflInputTensor->data.f[i] = features[i];
-}
+          tflInputTensor->data.f[i] = features[i];
+        }
         // Run inferencing
                 
         TfLiteStatus invokeStatus = tflInterpreter->Invoke();
@@ -245,7 +245,7 @@ void loop() {
         }
 
         // Loop through the output tensor values from the model
-        for (int i = 0; i < NUM_GESTURES; i++) {
+        for (uint8_t i = 0; i < NUM_GESTURES; i++) {
           Serial.print(GESTURES[i]);
           Serial.print(": ");
           Serial.println(tflOutputTensor->data.f[i], 6);

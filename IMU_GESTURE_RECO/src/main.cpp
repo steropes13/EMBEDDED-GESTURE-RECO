@@ -231,10 +231,10 @@ void loop() {
         features[k++] = psdMean(axes[a]);
         features[k++] = psdMax(axes[a]);
 
-}
+      }
         for(int i = 0; i < 42; i++){
-            tflInputTensor->data.f[i] = features[i];
-}
+          tflInputTensor->data.f[i] = features[i];
+        }
         // Run inferencing
                 
         TfLiteStatus invokeStatus = tflInterpreter->Invoke();
@@ -245,7 +245,7 @@ void loop() {
         }
 
         // Loop through the output tensor values from the model
-        for (int i = 0; i < NUM_GESTURES; i++) {
+        for (uint8_t i = 0; i < NUM_GESTURES; i++) {
           Serial.print(GESTURES[i]);
           Serial.print(": ");
           Serial.println(tflOutputTensor->data.f[i], 6);

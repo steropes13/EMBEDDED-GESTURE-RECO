@@ -101,7 +101,7 @@ pio run -e <environment_name> -t upload -d <project_directory>
 ```
 > Make sure to replace `<environment_name>` with the name of the environment you want to use (`nano33ble_SenseRev2` or `nano33ble_Sense`).
 
-> Make sure to replace `<project_directory>` with the path to the project you want to compile (the `./IMU_DATA_COLLECTION` is the only available for this moment).
+> Make sure to replace `<project_directory>` with the path to the project you want to compile (`./IMU_DATA_COLLECTION` or `./IMU_GESTURE_RECO`).
 
 ## Monitoring the serial output
 After uploading the firmware, you can monitor the serial output using:

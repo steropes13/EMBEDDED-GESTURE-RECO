@@ -89,3 +89,29 @@ If you want to create your own datas you will have to use the `.ino` file locate
  - up-down-1.csv
  - shake-1.csv
 ```
+
+# Running the PlatformIO projects
+## Dependencies
+To run the PlatformIO projects, you will need to have the PlatformIO CLI installed on your system. You can install it using following the instructions on the [PlatformIO website](https://docs.platformio.org/en/latest/core/installation/methods/index.html). A more detailed instruction is available in the [`README.md`](./IMU_DATA_COLLECTION/README.md) file of the `IMU_DATA_COLLECTION` directory.
+
+## Compiling the code and uploading the firmware
+Using the PlatformIO CLI, you can compile the project using:
+```bash
+pio run -e <environment_name> -t upload -d <project_directory>
+```
+> Make sure to replace `<environment_name>` with the name of the environment you want to use (`nano33ble_SenseRev2` or `nano33ble_Sense`).
+
+> Make sure to replace `<project_directory>` with the path to the project you want to compile (the `./IMU_DATA_COLLECTION` is the only available for this moment).
+
+## Monitoring the serial output
+After uploading the firmware, you can monitor the serial output using:
+```bash
+pio device -t monitor -d <project_directory>
+```
+
+## Other information
+If you want to compile the project testing all the environments, you can use the command:
+```bash
+pio run -d <project_directory>
+```
+

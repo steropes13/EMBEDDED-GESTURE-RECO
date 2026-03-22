@@ -154,23 +154,47 @@ float maxVal(float *data) {
   return m;
 }
 
-/* approximation simple PSD */
+/* 
+  Simple PSD approximation (no FFT)
+  We approximate the signal power in the frequency domain by using 
+  the squared difference between consecutive samples.
+  This is similar to measuring how "fast" the signal changes,
+  which correlates with high-frequency content.
+*/
+
 float psdMean(float *data) {
   float sum = 0;
+
   for (int i = 1; i < numSamples; i++) {
+
+    // difference between consecutive samples (discrete derivative)
     float d = data[i] - data[i-1];
+
+    // square of the difference = instantaneous signal power
+    // large variations -> high frequency content -> higher power
     sum += d * d;
   }
+
+  // average power over the whole window
   return sum / numSamples;
 }
 
+
 float psdMax(float *data) {
   float maxp = 0;
+
   for (int i = 1; i < numSamples; i++) {
+
+    // difference between consecutive samples
     float d = data[i] - data[i-1];
+
+    // instantaneous power 
     float p = d * d;
+
+    // keep the maximum power value (captures strongest motion peak)
     if (p > maxp) maxp = p;
   }
+
   return maxp;
 }
 

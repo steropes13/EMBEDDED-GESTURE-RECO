@@ -19,9 +19,19 @@
   #include <Arduino_LSM9DS1.h>
 #endif
 
+typedef struct {
+  uint64_t millis;
+  float ax;
+  float ay;
+  float az;
+  float gx;
+  float gy;
+  float gz;
+} IMUData;
 
 const float accelerationThreshold = 2.5; // threshold of significant in G's
 const int numSamples = 119;
+IMUData dataSamples[numSamples];
 
 int samplesRead = numSamples;
 
@@ -35,11 +45,40 @@ void setup() {
   }
 
   // print the header
-  Serial.println("aX,aY,aZ,gX,gY,gZ");
+  Serial.println("millis,aX,aY,aZ,gX,gY,gZ");
+}
+
+/*!
+  @brief Prints the data in CSV format
+
+  @param data the data to print
+  @param sampleLen the number of samples in the data, defaults to `numSamples`
+
+  @returns void
+ */
+void printData(IMUData* data, uint32_t sampleLen = numSamples) {
+  for(int i = 0; i < sampleLen; i++){
+    Serial.print(data[i].millis);
+    Serial.print(',');
+    Serial.print(data[i].ax, 3);
+    Serial.print(',');
+    Serial.print(data[i].ay, 3);
+    Serial.print(',');
+    Serial.print(data[i].az, 3);
+    Serial.print(',');
+    Serial.print(data[i].gx, 3);
+    Serial.print(',');
+    Serial.print(data[i].gy, 3);
+    Serial.print(',');
+    Serial.print(data[i].gz, 3);
+    Serial.println();
+
+  }
+  Serial.println();
 }
 
 void loop() {
-  float aX, aY, aZ, gX, gY, gZ;
+  float aX, aY, aZ;
 
   // wait for significant motion
   while (samplesRead == numSamples) {
@@ -56,6 +95,7 @@ void loop() {
         samplesRead = 0;
         break;
       }
+      
     }
   }
 
@@ -66,29 +106,12 @@ void loop() {
     // available
     if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
       // read the acceleration and gyroscope data
-      IMU.readAcceleration(aX, aY, aZ);
-      IMU.readGyroscope(gX, gY, gZ);
-
+      IMU.readAcceleration(dataSamples[samplesRead].ax, dataSamples[samplesRead].ay, dataSamples[samplesRead].az);
+      IMU.readGyroscope(dataSamples[samplesRead].gx, dataSamples[samplesRead].gy, dataSamples[samplesRead].gz);
+      dataSamples[samplesRead].millis = millis(); 
       samplesRead++;
-
-      // print the data in CSV format
-      Serial.print(aX, 3);
-      Serial.print(',');
-      Serial.print(aY, 3);
-      Serial.print(',');
-      Serial.print(aZ, 3);
-      Serial.print(',');
-      Serial.print(gX, 3);
-      Serial.print(',');
-      Serial.print(gY, 3);
-      Serial.print(',');
-      Serial.print(gZ, 3);
-      Serial.println();
-
-      if (samplesRead == numSamples) {
-        // add an empty line if it's the last sample
-        Serial.println();
-      }
     }
   }
+
+  printData(dataSamples);
 }

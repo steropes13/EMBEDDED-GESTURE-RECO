@@ -11,6 +11,8 @@
   This example code is in the public domain.
 */
 
+#include <Arduino.h>
+
 #ifdef NANO33BLE_SENSE_REV2
   #include <Arduino_BMI270_BMM150.h>
 #elif defined(NANO33BLE_SENSE)

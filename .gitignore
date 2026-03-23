@@ -1,5 +1,6 @@
-# Python virtual environment
+# Python virtual environment & jupyter notebook checkpoints
 .venv/
+.ipynb_checkpoints/
 
 # Scratch files for testing or hardware related data
 *scratch/*

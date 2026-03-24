@@ -115,3 +115,19 @@ If you want to compile the project testing all the environments, you can use the
 pio run -d <project_directory>
 ```
 
+# Collecting data with the `IMU_DATA_COLLECTION` project and the `collect_data.py` script
+## Dipendencies
+To collect data using the `collect_data.py` script, you will need to have Python installed on your system, along with the `pyserial` library. You can install `pyserial` using pip:
+```bash
+pip install pyserial
+```
+
+## Running the data collection script
+To run the data collection first of all upload the firmware of the `IMU_DATA_COLLECTION` as described in the previous section. Then, you can run the `collect_data.py` script using:
+
+```bash
+python collect_data.py <file_name> 
+```
+After running this command, the script will ask a number to the corrisponding port you want from the list. 
+
+> Make sure to replace `<file_name>` with the name of the file you want to save the collected data to (e.g., `data-gestures/circle-1.csv`).

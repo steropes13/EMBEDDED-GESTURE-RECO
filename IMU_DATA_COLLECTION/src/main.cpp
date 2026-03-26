@@ -30,7 +30,7 @@ typedef struct {
 } IMUData;
 
 const float accelerationThreshold = 2.5; // threshold of significant in G's
-const int numSamples = 119;
+const int numSamples = 128;
 IMUData dataSamples[numSamples];
 
 int samplesRead = numSamples;

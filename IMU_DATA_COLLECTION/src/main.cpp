@@ -13,6 +13,7 @@
 
 #include <Arduino.h>
 
+#ifndef NANO33BLE_ANALOG
 #ifdef NANO33BLE_SENSE_REV2
   #include <Arduino_BMI270_BMM150.h>
 #elif defined(NANO33BLE_SENSE)
@@ -115,3 +116,63 @@ void loop() {
 
   printData(dataSamples);
 }
+
+#else
+
+#include <arduinoFFT.h>
+
+const uint16_t numSamples = 1024;
+uint64_t timestamp[numSamples];
+float samples[numSamples];
+float vReal[numSamples];
+float vImag[numSamples];
+float psd[numSamples/2];
+
+float complexAbs(float re, float im) {
+  return sqrt(re * re + im * im);
+}
+
+void computePSD(float *dataRe, float *dataIm, float* out, float samplingFreq, uint16_t size = numSamples/2) {
+  for(int i = 0; i < size; ++i){
+    out[i] = complexAbs(dataRe[i], dataIm[i]) * complexAbs(dataRe[i], dataIm[i]) / (size * samplingFreq);
+  }
+}
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial);  
+  delay(2000); // wait for the serial monitor to open
+  Serial.println("Analog data collection started");
+  for(int i = 0; i < numSamples; i++){
+    timestamp[i] = micros();
+    samples[i] = analogRead(A6);
+  }
+
+  memcpy(vReal, samples, sizeof(samples));
+  ArduinoFFT<float> FFT = ArduinoFFT<float>(vReal, vImag, numSamples, 1000);
+  FFT.compute(FFT_FORWARD);
+  computePSD(vReal, vImag, psd, 1000);
+  FFT.complexToMagnitude();
+
+  //Print the values
+  Serial.println("Time (s), Sample, FFT, PSD");
+  for (int i = 0; i < numSamples; i++) {
+    Serial.print(timestamp[i] / 1e6, 6); // time in seconds
+    Serial.print(", ");
+    Serial.print(samples[i], 3);
+    Serial.print(", ");
+    if (i < numSamples/2) {
+      Serial.print(vReal[i], 3);
+      Serial.print(", ");
+      Serial.print(psd[i], 6);
+    }else {
+      Serial.print("nan, nan");
+    }
+    Serial.println();
+  }
+
+}
+
+
+void loop() {}
+#endif

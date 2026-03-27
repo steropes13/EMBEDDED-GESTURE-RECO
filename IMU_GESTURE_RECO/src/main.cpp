@@ -85,12 +85,30 @@ const char* GESTURES[] = {
     "shake-1",
     "up-down-1"
 };
+// const char* GESTURES[] = {
+//     "circle-1",
+//     "circle-2",
+//     "shake-1",
+//     "up-down-1"
+// };
 
 #define NUM_GESTURES (sizeof(GESTURES) / sizeof(GESTURES[0]))
 
 void setup() {
+  // Configuring pins 22, 23, and 24 as outputs to power the RGB LED
+  pinMode(22, OUTPUT);
+  pinMode(23, OUTPUT);
+  pinMode(24, OUTPUT);
+  digitalWrite(22, LOW); 
+  digitalWrite(23, LOW);
+  digitalWrite(24, LOW);
+  delay(1000);
+  digitalWrite(23, HIGH);
+  digitalWrite(24, HIGH);
+
   Serial.begin(9600);
   while (!Serial);
+  digitalWrite(22, HIGH);
 
   // initialize the IMU
   if (!IMU.begin()) {
@@ -228,6 +246,7 @@ void computeFFT(float *data,float samplingFreq ,uint16_t size = numSamples) {
 uint32_t t0 = 0;
 
 void loop() {
+
 #if defined(COLLECT_DATA) && !defined(COLLECT_REST) 
   while (1) {
     if (IMU.accelerationAvailable()) {
@@ -246,89 +265,130 @@ void loop() {
       
     }
   }
-  {
+
 #else
-  if (millis() - t0 > 1000) { // every 1 second
+  // float aSum = 0;
+  // bool triggered = false;
+  // uint32_t t1 = millis();
+  // while (1) { // every 1 second
+  //   // if(millis() - t1 > 1000){
+  //   //   t1 = millis();
+  //   //   digitalWrite(22, !digitalRead(22)); // toggle power to the IMU to reset it
+  //   // }
+
+  //   if (IMU.accelerationAvailable()) {
+  //       digitalWrite(23, !digitalRead(23)); // toggle power to the IMU to reset it
+  //       // read the acceleration data
+  //       IMU.readAcceleration(ax[0], ay[0], az[0]);
+        
+  //       // sum up the absolutes
+  //       aSum = fabs(ax[0]) + fabs(ay[0]) + fabs(az[0]);
+  //       // check if it's above the threshold
+  //       if (aSum >= accelerationThreshold && millis() - t0 > 2000) {
+  //         Serial.println("Movement detected!");
+  //         t0 = millis();
+  //         break;
+  //       }
+  //     }
+  // }
 #endif
-    t0 = millis();
-    // Sampling the data from the IMU until we have enough samples to fill our buffers
-    while (samplesRead < numSamples) {
-      // check if new acceleration AND gyroscope data is available
-      if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
-        // read the acceleration and gyroscope data
-        IMU.readAcceleration(ax[samplesRead], ay[samplesRead], az[samplesRead]);
-        IMU.readGyroscope(gx[samplesRead], gy[samplesRead], gz[samplesRead]);
-        // Save the timestamp of the sample
-        timestamp[samplesRead] = micros();
-        samplesRead++;
-      }
+  // Sampling the data from the IMU until we have enough samples to fill our buffers
+  while (samplesRead < numSamples) { 
+    // check if new acceleration AND gyroscope data is available
+    if (IMU.accelerationAvailable() && IMU.gyroscopeAvailable()) {
+      // read the acceleration and gyroscope data
+      IMU.readAcceleration(ax[samplesRead], ay[samplesRead], az[samplesRead]);
+      IMU.readGyroscope(gx[samplesRead], gy[samplesRead], gz[samplesRead]);
+      // Save the timestamp of the sample
+      timestamp[samplesRead] = millis();
+      samplesRead++;
     }
-
-    // Post processing the data by
-    // normalizing the IMU data between 0 to 1 and calculating the mean sampling interval
-    uint64_t interval = 0;
-    for (int i = 0; i < numSamples; i++) {
-      // Normalize acceleration data from -4g to +4g
-      ax[i] = (ax[i] + 4.0) / 8.0;
-      ay[i] = (ay[i] + 4.0) / 8.0;
-      az[i] = (az[i] + 4.0) / 8.0;
-      // Normalize gyroscope data from -2000 dps to +2000 dps
-      gx[i] = (gx[i] + 2000.0) / 4000.0;
-      gy[i] = (gy[i] + 2000.0) / 4000.0;
-      gz[i] = (gz[i] + 2000.0) / 4000.0;
-      // Calculate the mean sampling interval
-      if (i > 0) {
-        interval += timestamp[i] - timestamp[i - 1];
-      }
-    }
-    float samplingFreq = (1.0E9 * (float)numSamples) / interval; // mean sampling interval in microseconds
-    
-    // Extracting features from the raw data
-    float features[42];
-    int k = 0;
-
-    float* axes[6] = {ax, ay, az, gx, gy, gz};
-
-    for(int a = 0; a < 6; a++){
-      features[k++] = mean(axes[a]);
-      features[k++] = stddev(axes[a]);
-      features[k++] = rms(axes[a]);
-      features[k++] = minVal(axes[a]);
-      features[k++] = maxVal(axes[a]);
-      computeFFT(axes[a], samplingFreq);
-      computePSD(axes[a], vImag, samplingFreq); // Assuming a sampling frequency of 100 Hz
-      features[k++] = psdMean(axes[a]);
-      features[k++] = psdMax(axes[a]);
-    }
-
-  #ifndef COLLECT_DATA
-    // Filling the input tensor for the model
-    for(int i = 0; i < 42; i++){
-      tflInputTensor->data.f[i] = features[i];
-    }
-
-    // Run inference with the model on the input data
-    TfLiteStatus invokeStatus = tflInterpreter->Invoke();
-    if (invokeStatus != kTfLiteOk) {
-      Serial.println("Invoke failed!");
-      while (1);
-      return;
-    }
-
-    // Loop through the output tensor values from the model
-    for (uint8_t i = 0; i < NUM_GESTURES; i++) {
-      Serial.print(GESTURES[i]);
-      Serial.print(": ");
-      Serial.println(tflOutputTensor->data.f[i], 6);
-    }
-    Serial.println();
-    samplesRead = numSamples; //reinitisialize (avoid some bugs)
-  #else
-    for(int i = 0; i < 42; i++){
-      Serial.print(features[i], 6);
-      if(i < 41) Serial.print(",");
-    }
-    Serial.println();
-  #endif
   }
+  samplesRead = 0;
+
+  // Post processing the data by
+  // normalizing the IMU data between 0 to 1 and calculating the mean sampling interval
+  uint64_t interval = 0;
+  for (int i = 0; i < numSamples; i++) {
+    // Normalize acceleration data from -4g to +4g
+    ax[i] = (ax[i] + 4.0) / 8.0;
+    ay[i] = (ay[i] + 4.0) / 8.0;
+    az[i] = (az[i] + 4.0) / 8.0;
+    // Normalize gyroscope data from -2000 dps to +2000 dps
+    gx[i] = (gx[i] + 2000.0) / 4000.0;
+    gy[i] = (gy[i] + 2000.0) / 4000.0;
+    gz[i] = (gz[i] + 2000.0) / 4000.0;
+    // Calculate the mean sampling interval
+    if (i > 0) {
+      interval += timestamp[i] - timestamp[i - 1];
+    }
+  }
+  double samplingFreq = (1.0E3 * (double)numSamples) / interval; // mean sampling interval in microseconds
+  double samplingPeriod = (double)interval / (numSamples - 1); // mean sampling period in microseconds
+  // Serial.print("Interval: ");
+  // Serial.print(interval);
+  // Serial.println(" ms");
+
+  // Serial.print("Sampling frequency: ");
+  // Serial.print(samplingFreq);
+  // Serial.println(" Hz");
+
+  // Serial.print("Mean sampling period: ");
+  // Serial.print(samplingPeriod);
+  // Serial.println(" us");
+
+  // for (int i = 0; i < 10; ++i) {
+  //   Serial.print("timestamp[");
+  //   Serial.print(i);
+  //   Serial.print("] = ");
+  //   Serial.println(timestamp[i]);
+  // }
+
+  // Extracting features from the raw data
+  float features[42];
+  int k = 0;
+
+  float* axes[6] = {ax, ay, az, gx, gy, gz};
+
+  for(int a = 0; a < 6; a++){
+    features[k++] = mean(axes[a]);
+    features[k++] = stddev(axes[a]);
+    features[k++] = rms(axes[a]);
+    features[k++] = minVal(axes[a]);
+    features[k++] = maxVal(axes[a]);
+    computeFFT(axes[a], samplingFreq);
+    computePSD(axes[a], vImag, samplingFreq); // Assuming a sampling frequency of 100 Hz
+    features[k++] = psdMean(axes[a]);
+    features[k++] = psdMax(axes[a]);
+  }
+
+#ifndef COLLECT_DATA
+  // Filling the input tensor for the model
+  for(int i = 0; i < 42; i++){
+    tflInputTensor->data.f[i] = features[i];
+  }
+
+  // Run inference with the model on the input data
+  TfLiteStatus invokeStatus = tflInterpreter->Invoke();
+  if (invokeStatus != kTfLiteOk) {
+    Serial.println("Invoke failed!");
+    while (1);
+    return;
+  }
+
+  // Loop through the output tensor values from the model
+  for (uint8_t i = 0; i < NUM_GESTURES; i++) {
+    Serial.print(GESTURES[i]);
+    Serial.print(": ");
+    Serial.println(tflOutputTensor->data.f[i], 6);
+  }
+  Serial.println();
+  // samplesRead = numSamples; //reinitisialize (avoid some bugs)
+#else
+  for(int i = 0; i < 42; i++){
+    Serial.print(features[i], 6);
+    if(i < 41) Serial.print(",");
+  }
+  Serial.println();
+#endif
 }

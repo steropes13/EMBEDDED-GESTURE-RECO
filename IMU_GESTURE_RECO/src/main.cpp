@@ -16,11 +16,19 @@
 #include <Arduino.h>
 #include <arduinoFFT.h>
 
+#ifdef COLLECT_DATA
+  #warning "This code is for collecting data to train the model"
+  #define SERIAL_PRINTLN(...) 
+#else 
+  #define SERIAL_PRINTLN(...) Serial.println(__VA_ARGS__)
+#endif
+
 #ifdef NANO33BLE_SENSE_REV2
   #include <Arduino_BMI270_BMM150.h>
 #elif defined(NANO33BLE_SENSE)
   #include <Arduino_LSM9DS1.h>
 #endif
+
 
 #include <TensorFlowLite.h>
 #include <tensorflow/lite/micro/all_ops_resolver.h>
@@ -29,7 +37,7 @@
 
 #include "model.h"
 // we changed the threshold of the acceleration because it was too high to detect up-down movement and rest 
-const float accelerationThreshold = 1.0; // threshold of significant in G's
+const float accelerationThreshold = 2.0; // threshold of significant in G's
 const uint16_t numSamples = 128;
 
 //buffer of datas 
@@ -89,38 +97,50 @@ void setup() {
     Serial.println("Failed to initialize IMU!");
     while (1);
   }
-
-  // print out the samples rates of the IMUs
-  Serial.print("Accelerometer sample rate = ");
-  Serial.print(IMU.accelerationSampleRate());
-  Serial.println(" Hz");
-  Serial.print("Gyroscope sample rate = ");
-  Serial.print(IMU.gyroscopeSampleRate());
-  Serial.println(" Hz");
-
-  Serial.println();
-
-  // get the TFL representation of the model byte array
-  tflModel = tflite::GetModel(model);
-  if (tflModel->version() != TFLITE_SCHEMA_VERSION) {
-    Serial.println("Model schema mismatch!");
-    while (1);
+  
+  while (!IMU.accelerationAvailable() || !IMU.gyroscopeAvailable()) {
+    SERIAL_PRINTLN("Waiting for IMU to be available...");
+    delay(100);
   }
+  IMU.readAcceleration(ax[0], ay[0], az[0]);
+  IMU.readGyroscope(gx[0], gy[0], gz[0]);
+  SERIAL_PRINTLN("IMU initialized successfully!");
 
-  // Build an interpreter to run the model with.
-  static tflite::MicroInterpreter static_interpreter(
-      tflModel, tflOpsResolver, tensorArena, tensorArenaSize);
-  tflInterpreter = &static_interpreter;
+  #ifndef COLLECT_DATA
+    // print out the samples rates of the IMUs
+    Serial.print("Accelerometer sample rate = ");
+    Serial.print(IMU.accelerationSampleRate());
+    Serial.println(" Hz");
+    Serial.print("Gyroscope sample rate = ");
+    Serial.print(IMU.gyroscopeSampleRate());
+    Serial.println(" Hz");
 
-  // Create an interpreter to run the model
-  //tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver, tensorArena, tensorArenaSize, &tflErrorReporter);
+    Serial.println();
 
-  // Allocate memory for the model's input and output tensors
-  tflInterpreter->AllocateTensors();
+    // get the TFL representation of the model byte array
+    tflModel = tflite::GetModel(model);
+    if (tflModel->version() != TFLITE_SCHEMA_VERSION) {
+      Serial.println("Model schema mismatch!");
+      while (1);
+    }
 
-  // Get pointers for the model's input and output tensors
-  tflInputTensor = tflInterpreter->input(0);
-  tflOutputTensor = tflInterpreter->output(0);
+    // Build an interpreter to run the model with.
+    static tflite::MicroInterpreter static_interpreter(
+        tflModel, tflOpsResolver, tensorArena, tensorArenaSize);
+    tflInterpreter = &static_interpreter;
+
+    // Create an interpreter to run the model
+    //tflInterpreter = new tflite::MicroInterpreter(tflModel, tflOpsResolver, tensorArena, tensorArenaSize, &tflErrorReporter);
+
+    // Allocate memory for the model's input and output tensors
+    tflInterpreter->AllocateTensors();
+
+    // Get pointers for the model's input and output tensors
+    tflInputTensor = tflInterpreter->input(0);
+    tflOutputTensor = tflInterpreter->output(0);
+  #else
+    Serial.println("aX_mean,aX_stddev,aX_rms,aX_min,aX_max,aX_psdMean,aX_psdMax,aY_mean,aY_stddev,aY_rms,aY_min,aY_max,aY_psdMean,aY_psdMax,aZ_mean,aZ_stddev,aZ_rms,aZ_min,aZ_max,aZ_psdMean,aZ_psdMax,gX_mean,gX_stddev,gX_rms,gX_min,gX_max,gX_psdMean,gX_psdMax,gY_mean,gY_stddev,gY_rms,gY_min,gY_max,gY_psdMean,gY_psdMax,gZ_mean,gZ_stddev,gZ_rms,gZ_min,gZ_max,gZ_psdMean,gZ_psdMax");
+  #endif
 }
 
 float mean(float *data, uint16_t size = numSamples) {
@@ -198,7 +218,7 @@ void computePSD(float *dataRe, float *dataIm, float samplingFreq, uint16_t size 
 }
 
 void computeFFT(float *data,float samplingFreq ,uint16_t size = numSamples) {
-  static ArduinoFFT<float> FFT = ArduinoFFT<float>(data, vImag, size, samplingFreq);
+  ArduinoFFT<float> FFT = ArduinoFFT<float>(data, vImag, size, samplingFreq);
   // Compute FFT
   // FFT.windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
   FFT.compute(FFT_FORWARD);
@@ -207,7 +227,28 @@ void computeFFT(float *data,float samplingFreq ,uint16_t size = numSamples) {
 uint32_t t0 = 0;
 
 void loop() {
+#ifdef COLLECT_DATA
+  while (1) {
+    if (IMU.accelerationAvailable()) {
+      // read the acceleration data
+      IMU.readAcceleration(ax[0], ay[0], az[0]);
+
+      // sum up the absolutes
+      float aSum = fabs(ax[0]) + fabs(ay[0]) + fabs(az[0]);
+
+      // check if it's above the threshold
+      if (aSum >= accelerationThreshold) {
+        // reset the sample read count
+        samplesRead = 0;
+        break;
+      }
+      
+    }
+  }
+  {
+#else
   if (millis() - t0 > 1000) { // every 1 second
+#endif
     t0 = millis();
     // Sampling the data from the IMU until we have enough samples to fill our buffers
     while (samplesRead < numSamples) {
@@ -236,7 +277,7 @@ void loop() {
       gz[i] = (gz[i] + 2000.0) / 4000.0;
       // Calculate the mean sampling interval
       if (i > 0) {
-        interval = timestamp[i] - timestamp[i - 1];
+        interval += timestamp[i] - timestamp[i - 1];
       }
     }
     float samplingFreq = (1.0E9 * (float)numSamples) / interval; // mean sampling interval in microseconds
@@ -259,6 +300,7 @@ void loop() {
       features[k++] = psdMax(axes[a]);
     }
 
+  #ifndef COLLECT_DATA
     // Filling the input tensor for the model
     for(int i = 0; i < 42; i++){
       tflInputTensor->data.f[i] = features[i];
@@ -280,5 +322,12 @@ void loop() {
     }
     Serial.println();
     samplesRead = numSamples; //reinitisialize (avoid some bugs)
+  #else
+    for(int i = 0; i < 42; i++){
+      Serial.print(features[i], 6);
+      if(i < 41) Serial.print(",");
+    }
+    Serial.println();
+  #endif
   }
 }

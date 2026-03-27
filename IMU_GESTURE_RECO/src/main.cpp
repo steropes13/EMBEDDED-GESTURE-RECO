@@ -267,30 +267,28 @@ void loop() {
   }
 
 #else
-  // float aSum = 0;
-  // bool triggered = false;
-  // uint32_t t1 = millis();
-  // while (1) { // every 1 second
-  //   // if(millis() - t1 > 1000){
-  //   //   t1 = millis();
-  //   //   digitalWrite(22, !digitalRead(22)); // toggle power to the IMU to reset it
-  //   // }
+  float aSum = 0;
+  while (1) { // every 1 second
+    if(millis() - t0 > 10000){
+      t0 = millis();
+      Serial.println("Timeout reached, starting new sample...");
+      break;
+    }
 
-  //   if (IMU.accelerationAvailable()) {
-  //       digitalWrite(23, !digitalRead(23)); // toggle power to the IMU to reset it
-  //       // read the acceleration data
-  //       IMU.readAcceleration(ax[0], ay[0], az[0]);
-        
-  //       // sum up the absolutes
-  //       aSum = fabs(ax[0]) + fabs(ay[0]) + fabs(az[0]);
-  //       // check if it's above the threshold
-  //       if (aSum >= accelerationThreshold && millis() - t0 > 2000) {
-  //         Serial.println("Movement detected!");
-  //         t0 = millis();
-  //         break;
-  //       }
-  //     }
-  // }
+    if (IMU.accelerationAvailable()) {
+      // read the acceleration data
+      IMU.readAcceleration(ax[0], ay[0], az[0]);
+      
+      // sum up the absolutes
+      aSum = fabs(ax[0]) + fabs(ay[0]) + fabs(az[0]);
+      // check if it's above the threshold
+      if (aSum >= accelerationThreshold && millis() - t0 > 1500) {
+        // Serial.println("Movement detected!");
+        t0 = millis();
+        break;
+      }
+    }
+  }
 #endif
   // Sampling the data from the IMU until we have enough samples to fill our buffers
   while (samplesRead < numSamples) { 
@@ -324,7 +322,7 @@ void loop() {
     }
   }
   double samplingFreq = (1.0E3 * (double)numSamples) / interval; // mean sampling interval in microseconds
-  double samplingPeriod = (double)interval / (numSamples - 1); // mean sampling period in microseconds
+  // double samplingPeriod = (double)interval / (numSamples - 1); // mean sampling period in microseconds
   // Serial.print("Interval: ");
   // Serial.print(interval);
   // Serial.println(" ms");

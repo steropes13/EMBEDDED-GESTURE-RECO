@@ -139,7 +139,7 @@ void setup() {
     tflInputTensor = tflInterpreter->input(0);
     tflOutputTensor = tflInterpreter->output(0);
   #else
-    Serial.println("aX_mean,aX_stddev,aX_rms,aX_min,aX_max,aX_psdMean,aX_psdMax,aY_mean,aY_stddev,aY_rms,aY_min,aY_max,aY_psdMean,aY_psdMax,aZ_mean,aZ_stddev,aZ_rms,aZ_min,aZ_max,aZ_psdMean,aZ_psdMax,gX_mean,gX_stddev,gX_rms,gX_min,gX_max,gX_psdMean,gX_psdMax,gY_mean,gY_stddev,gY_rms,gY_min,gY_max,gY_psdMean,gY_psdMax,gZ_mean,gZ_stddev,gZ_rms,gZ_min,gZ_max,gZ_psdMean,gZ_psdMax");
+    Serial.println("aX_mean,aX_stddev,aX_rms,aX_min,aX_max,aX_psdMean,aX_psdMax,gX_mean,gX_stddev,aY_rms,aY_min,aY_max,aY_psdMean,aY_psdMax,aZ_mean,aZ_stddev,aZ_rms,aZ_min,aZ_max,aZ_psdMean,aZ_psdMax,gX_mean,gX_stddev,gX_rms,gX_min,gX_max,gX_psdMean,gX_psdMax,gY_mean,gY_stddev,gY_rms,gY_min,gY_max,gY_psdMean,gY_psdMax,gZ_mean,gZ_stddev,gZ_rms,gZ_min,gZ_max,gZ_psdMean,gZ_psdMax");
   #endif
 }
 
@@ -218,6 +218,7 @@ void computePSD(float *dataRe, float *dataIm, float samplingFreq, uint16_t size 
 }
 
 void computeFFT(float *data,float samplingFreq ,uint16_t size = numSamples) {
+  memset(vImag, 0, sizeof(vImag)); // zero out the imaginary part
   ArduinoFFT<float> FFT = ArduinoFFT<float>(data, vImag, size, samplingFreq);
   // Compute FFT
   // FFT.windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
@@ -227,7 +228,7 @@ void computeFFT(float *data,float samplingFreq ,uint16_t size = numSamples) {
 uint32_t t0 = 0;
 
 void loop() {
-#ifdef COLLECT_DATA
+#if defined(COLLECT_DATA) && !defined(COLLECT_REST) 
   while (1) {
     if (IMU.accelerationAvailable()) {
       // read the acceleration data

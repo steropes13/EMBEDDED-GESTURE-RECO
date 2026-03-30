@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-df = pd.read_csv('scratch/analog.csv')
+df = pd.read_csv('data-gestures/analog.csv')
 fft_c = np.fft.rfft(df['Sample'])
 psd_c = (np.abs(fft_c)**2)/(len(df['Sample'])*1000) #fs = 100Hz
 
@@ -21,14 +21,14 @@ sampleToPlot = 35
 axs[1].plot(df['FFT'][:sampleToPlot], label='Embedded FFT')
 axs[1].plot(fft_c[:sampleToPlot], label='Calculated FFT', linestyle='dashed')
 axs[1].set_title('Frequency vs FFT')
-axs[1].set_xlabel('Frequency (Hz)')
+axs[1].set_xlabel('Coefficient Index')
 axs[1].set_ylabel('FFT Value')  
 axs[1].legend()
 
 axs[2].plot(df['PSD'][:sampleToPlot], label='Embedded PSD')
 axs[2].plot(psd_c[:sampleToPlot], label='Calculated PSD', linestyle='dashed')
 axs[2].set_title('Frequency vs PSD')
-axs[2].set_xlabel('Frequency (Hz)')
+axs[2].set_xlabel('Coefficient Index')
 axs[2].set_ylabel('PSD Value')
 axs[2].legend()
 

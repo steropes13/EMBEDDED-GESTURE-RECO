@@ -107,3 +107,74 @@ python collect_data.py <file_name>
 After running this command, the script will ask a number to the corrisponding port you want from the list. 
 
 > Make sure to replace `<file_name>` with the name of the file you want to save the collected data to (e.g., `data-gestures/circle-1.csv`).
+
+# Other information
+- The `scripts/collect_data.py` script will save all the Serial Port data to a file.
+  You should provide the filename as an argument when running the script, and needs the `pyserial` library to work.
+  This is the command to run the script: 
+    ```bash
+    python scripts/collect_data.py <file_name> 
+    ```
+    Make sure to replace `<file_name>` with the name of the file you want to save the collected data to (e.g., `data-gestures/circle-1.csv`).
+- The `scripts/fftAnalysis.py` script is used to perform correlation between the FFT and PSD values calculated by the Arduino and the ones calculated using Python. It needs the `numpy`, `pandas` and `matplotlib` libraries to work and is linked to the `data-gestures/analog.csv` file, which is the file where the we collectd data of a Triangular Wawe carried at 300Hz and sampled at 1KHz using the arduino ADC. After collecting data on the arduino, the FFT and PSD values are calculated on the device and printed out using the Serial Port, then the `fftAnalysis.py` script reads these values and compares them with the ones calculated using Python, showing the results in a plot.
+    Here you can find the arduino code used to collect the data and calculate the FFT and PSD values: 
+    ```cpp
+    #include <arduinoFFT.h>
+
+    const uint16_t numSamples = 1024;
+    uint64_t timestamp[numSamples];
+    float samples[numSamples];
+    float vReal[numSamples];
+    float vImag[numSamples];
+    float psd[numSamples/2];
+
+    float complexAbs(float re, float im) {
+    return sqrt(re * re + im * im);
+    }
+
+    void computePSD(float *dataRe, float *dataIm, float* out, float samplingFreq, uint16_t size = numSamples/2) {
+    for(int i = 0; i < size; ++i){
+        out[i] = complexAbs(dataRe[i], dataIm[i]) * complexAbs(dataRe[i], dataIm[i]) / (size * samplingFreq);
+    }
+    }
+
+    void setup() {
+    Serial.begin(9600);
+    while (!Serial);  
+    delay(2000); // wait for the serial monitor to open
+    Serial.println("Analog data collection started");
+    for(int i = 0; i < numSamples; i++){
+        timestamp[i] = micros();
+        samples[i] = analogRead(A6);
+    }
+
+    memcpy(vReal, samples, sizeof(samples));
+    memset(vImag, 0, sizeof(vImag));
+    ArduinoFFT<float> FFT = ArduinoFFT<float>(vReal, vImag, numSamples, 1000);
+    FFT.compute(FFT_FORWARD);
+    computePSD(vReal, vImag, psd, 1000);
+    FFT.complexToMagnitude();
+
+    //Print the values
+    Serial.println("Time (s), Sample, FFT, PSD");
+    for (int i = 0; i < numSamples; i++) {
+        Serial.print(timestamp[i] / 1e6, 6); // time in seconds
+        Serial.print(", ");
+        Serial.print(samples[i], 3);
+        Serial.print(", ");
+        if (i < numSamples/2) {
+        Serial.print(vReal[i], 3);
+        Serial.print(", ");
+        Serial.print(psd[i], 6);
+        }else {
+        Serial.print("nan, nan");
+        }
+        Serial.println();
+    }
+
+    }
+
+
+    void loop() {}
+    #endif
+    ```

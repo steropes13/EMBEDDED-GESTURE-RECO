@@ -176,5 +176,4 @@ After running this command, the script will ask a number to the corrisponding po
 
 
     void loop() {}
-    #endif
     ```
